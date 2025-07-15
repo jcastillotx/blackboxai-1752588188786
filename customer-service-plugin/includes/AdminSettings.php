@@ -12,6 +12,7 @@ class AdminSettings {
         register_setting( 'csp_settings_group', 'csp_stripe_publishable_key' );
         register_setting( 'csp_settings_group', 'csp_stripe_secret_key' );
         register_setting( 'csp_settings_group', 'csp_openai_api_key' );
+        register_setting( 'csp_settings_group', 'csp_system_prompt' );
         register_setting( 'csp_settings_group', 'csp_workflow_vacation' );
         register_setting( 'csp_settings_group', 'csp_workflow_reduced_hours' );
     }
@@ -47,6 +48,9 @@ class AdminSettings {
                 <h2>OpenAI API Key</h2>
                 <label for="csp_openai_api_key">API Key:</label>
                 <input type="text" id="csp_openai_api_key" name="csp_openai_api_key" value="<?php echo esc_attr( get_option( 'csp_openai_api_key' ) ); ?>" size="50" />
+
+                <h2>ChatGPT System Prompt</h2>
+                <textarea id="csp_system_prompt" name="csp_system_prompt" rows="6" cols="50" placeholder="Enter the system prompt for ChatGPT API"><?php echo esc_textarea( get_option( 'csp_system_prompt', "You are a customer service assistant. Provide an estimated time and cost for the given task. If the cost is over $200, mention a $50 minimum deposit requirement." ) ); ?></textarea>
 
                 <h2>Workflow Settings</h2>
                 <label for="csp_workflow_vacation">Vacation Status:</label>
