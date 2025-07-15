@@ -145,10 +145,12 @@ class RequestForm {
         global $wpdb;
         $table = $wpdb->prefix . 'csp_requests';
 
+        $user_id = is_user_logged_in() ? get_current_user_id() : 0;
+
         $inserted = $wpdb->insert(
             $table,
             array(
-                'user_id' => 0, // Could be updated to actual user ID if logged in
+                'user_id' => $user_id,
                 'task_type' => $task_type,
                 'description' => $task_description,
                 'status' => 'pending',
@@ -162,10 +164,17 @@ class RequestForm {
             wp_send_json_error( 'Failed to submit request.' );
         }
 
-        // Handle payment option logic here (e.g., redirect to payment gateway or send invoice email)
-        // For now, just return success message
-
-        wp_send_json_success( 'Request submitted successfully.' );
+        // Handle payment option logic here
+        if ( $payment_option === 'pay_now' ) {
+            // For demonstration, return a URL to a payment gateway (to be implemented)
+            $payment_url = home_url( '/payment-gateway?request_id=' . $wpdb->insert_id );
+            wp_send_json_success( array( 'message' => 'Request submitted successfully.', 'payment_url' => $payment_url ) );
+        } elseif ( $payment_option === 'invoice' ) {
+            // Logic to send invoice email (to be implemented)
+            wp_send_json_success( array( 'message' => 'Request submitted successfully. Invoice will be sent to your email.' ) );
+        } else {
+            wp_send_json_success( 'Request submitted successfully.' );
+        }
     }
 }
 ?>
