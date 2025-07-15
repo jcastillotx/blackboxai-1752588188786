@@ -100,6 +100,155 @@ class CustomerServicePlugin {
             'dashicons-admin-comments',
             6
         );
+
+        add_submenu_page(
+            'customer-service-plugin',
+            'Requests',
+            'Requests',
+            'manage_options',
+            'csp_requests',
+            array( $this, 'admin_requests_page' )
+        );
+
+        add_submenu_page(
+            'customer-service-plugin',
+            'Messages',
+            'Messages',
+            'manage_options',
+            'csp_messages',
+            array( $this, 'admin_messages_page' )
+        );
+
+        add_submenu_page(
+            'customer-service-plugin',
+            'Invoices',
+            'Invoices',
+            'manage_options',
+            'csp_invoices',
+            array( $this, 'admin_invoices_page' )
+        );
+    }
+
+    public function admin_requests_page() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Unauthorized user' );
+        }
+        global $wpdb;
+        $table = $wpdb->prefix . 'csp_requests';
+        $requests = $wpdb->get_results( "SELECT * FROM $table ORDER BY created_at DESC", ARRAY_A );
+        ?>
+        <div class="wrap">
+            <h1>Customer Requests</h1>
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User ID</th>
+                        <th>Task Type</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Due Date</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $requests as $request ) : ?>
+                    <tr>
+                        <td><?php echo esc_html( $request['id'] ); ?></td>
+                        <td><?php echo esc_html( $request['user_id'] ); ?></td>
+                        <td><?php echo esc_html( $request['task_type'] ); ?></td>
+                        <td><?php echo esc_html( $request['description'] ); ?></td>
+                        <td><?php echo esc_html( $request['status'] ); ?></td>
+                        <td><?php echo esc_html( $request['due_date'] ); ?></td>
+                        <td><?php echo esc_html( $request['created_at'] ); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
+    }
+
+    public function admin_messages_page() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Unauthorized user' );
+        }
+        global $wpdb;
+        $table = $wpdb->prefix . 'csp_messages';
+        $messages = $wpdb->get_results( "SELECT * FROM $table ORDER BY timestamp DESC", ARRAY_A );
+        ?>
+        <div class="wrap">
+            <h1>Customer Messages</h1>
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Sender ID</th>
+                        <th>Receiver ID</th>
+                        <th>Message</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $messages as $message ) : ?>
+                    <tr>
+                        <td><?php echo esc_html( $message['id'] ); ?></td>
+                        <td><?php echo esc_html( $message['sender_id'] ); ?></td>
+                        <td><?php echo esc_html( $message['receiver_id'] ); ?></td>
+                        <td><?php echo esc_html( $message['message'] ); ?></td>
+                        <td><?php echo esc_html( $message['timestamp'] ); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
+    }
+
+    public function admin_invoices_page() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Unauthorized user' );
+        }
+        global $wpdb;
+        $table = $wpdb->prefix . 'csp_invoices';
+        $invoices = $wpdb->get_results( "SELECT * FROM $table ORDER BY created_at DESC", ARRAY_A );
+        ?>
+        <div class="wrap">
+            <h1>Customer Invoices</h1>
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User ID</th>
+                        <th>Invoice Number</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Invoice File</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $invoices as $invoice ) : ?>
+                    <tr>
+                        <td><?php echo esc_html( $invoice['id'] ); ?></td>
+                        <td><?php echo esc_html( $invoice['user_id'] ); ?></td>
+                        <td><?php echo esc_html( $invoice['invoice_number'] ); ?></td>
+                        <td><?php echo esc_html( $invoice['amount'] ); ?></td>
+                        <td><?php echo esc_html( $invoice['status'] ); ?></td>
+                        <td>
+                            <?php if ( $invoice['invoice_file'] ) : ?>
+                                <a href="<?php echo esc_url( wp_upload_dir()['baseurl'] . '/' . $invoice['invoice_file'] ); ?>" target="_blank">View</a>
+                            <?php else : ?>
+                                N/A
+                            <?php endif; ?>
+                        </td>
+                        <td><?php echo esc_html( $invoice['created_at'] ); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
     }
 
     public function ajax_get_requests() {
@@ -129,30 +278,66 @@ class CustomerServicePlugin {
         register_setting( 'csp_settings_group', 'csp_worker_schedule' );
         register_setting( 'csp_settings_group', 'csp_maintenance_plans' );
         register_setting( 'csp_settings_group', 'csp_task_rates' );
+        register_setting( 'csp_settings_group', 'csp_stripe_publishable_key' );
+        register_setting( 'csp_settings_group', 'csp_stripe_secret_key' );
+        register_setting( 'csp_settings_group', 'csp_openai_api_key' );
+        register_setting( 'csp_settings_group', 'csp_workflow_vacation' );
+        register_setting( 'csp_settings_group', 'csp_workflow_reduced_hours' );
     }
 
     public function admin_page() {
+        global $wpdb;
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Unauthorized user' );
+        }
+
+        $table = $wpdb->prefix . 'csp_requests';
+
+        // Get counts for pending and completed tasks
+        $pending_count = $wpdb->get_var( "SELECT COUNT(*) FROM $table WHERE status = 'pending'" );
+        $completed_count = $wpdb->get_var( "SELECT COUNT(*) FROM $table WHERE status = 'completed'" );
+
+        // Get active tasks (not completed)
+        $active_tasks = $wpdb->get_results( "SELECT * FROM $table WHERE status != 'completed' ORDER BY created_at DESC", ARRAY_A );
+
         ?>
         <div class="wrap">
-            <h1>Customer Service Plugin Settings</h1>
-            <form method="post" action="options.php">
-                <?php
-                settings_fields( 'csp_settings_group' );
-                do_settings_sections( 'csp_settings_group' );
-                ?>
-                <h2>Worker Schedule</h2>
-                <textarea name="csp_worker_schedule" rows="10" cols="50" placeholder="Enter worker schedule JSON or details here"><?php echo esc_textarea( get_option( 'csp_worker_schedule' ) ); ?></textarea>
+            <h1>Customer Service Admin Dashboard</h1>
 
-                <h2>Maintenance Plans</h2>
-                <textarea name="csp_maintenance_plans" rows="10" cols="50" placeholder="Enter maintenance plans JSON or details here"><?php echo esc_textarea( get_option( 'csp_maintenance_plans' ) ); ?></textarea>
+            <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                <div style="flex: 1; padding: 20px; background: #f7f7f7; border-radius: 8px; text-align: center;">
+                    <h2>Pending Tasks</h2>
+                    <p style="font-size: 2em; font-weight: bold;"><?php echo intval( $pending_count ); ?></p>
+                </div>
+                <div style="flex: 1; padding: 20px; background: #f7f7f7; border-radius: 8px; text-align: center;">
+                    <h2>Completed Tasks</h2>
+                    <p style="font-size: 2em; font-weight: bold;"><?php echo intval( $completed_count ); ?></p>
+                </div>
+            </div>
 
-                <h2>Task Rates (JSON)</h2>
-                <textarea name="csp_task_rates" rows="10" cols="50" placeholder='{"content_update": 100, "debug": 150, "development": 300, "other": 200}'><?php echo esc_textarea( get_option( 'csp_task_rates' ) ); ?></textarea>
-
-                <p>Enter task rates as JSON with task type keys and numeric values.</p>
-
-                <?php submit_button(); ?>
-            </form>
+            <h2>Active Tasks</h2>
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th>Submission Date</th>
+                        <th>Title</th>
+                        <th>Assigned To</th>
+                        <th>Status</th>
+                        <th>Required Completion Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $active_tasks as $task ) : ?>
+                    <tr>
+                        <td><?php echo esc_html( $task['created_at'] ); ?></td>
+                        <td><?php echo esc_html( $task['task_type'] ); ?></td>
+                        <td><?php echo esc_html( $task['user_id'] ); ?></td>
+                        <td><?php echo esc_html( $task['status'] ); ?></td>
+                        <td><?php echo esc_html( $task['due_date'] ? $task['due_date'] : 'N/A' ); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
         <?php
     }
