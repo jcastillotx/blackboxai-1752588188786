@@ -1,74 +1,106 @@
 jQuery(document).ready(function($) {
-    $('#csp_get_estimate_btn').on('click', function(e) {
-        e.preventDefault();
-
-        var taskType = $('#csp_task_type').val();
-        var taskDescription = $('#csp_task_description').val();
-        var clientEmail = $('#csp_client_email').val();
-
-        if (!taskType || !taskDescription || !clientEmail) {
-            alert('Please fill in all required fields before getting an estimate.');
-            return;
-        }
-
-        $('#csp_estimate_result').html('Getting estimate...');
-
+    // Load client requests in dashboard
+    function loadRequests() {
         $.ajax({
             url: csp_ajax_obj.ajax_url,
-            method: 'POST',
+            method: 'GET',
             data: {
-                action: 'csp_get_estimate',
-                nonce: csp_ajax_obj.nonce,
-                task_type: taskType,
-                task_description: taskDescription,
-                client_email: clientEmail
+                action: 'csp_get_requests',
+                nonce: csp_ajax_obj.nonce
             },
             success: function(response) {
                 if (response.success) {
-                    var estimate = response.data;
-                    var coveredText = estimate.covered_by_plan ? 'Your maintenance plan covers this task.' : '';
-                    var discountText = estimate.discount > 0 ? 'You have a discount of $' + estimate.discount + '.' : '';
-                    var depositText = estimate.cost > 200 ? 'A $50 minimum deposit is required.' : '';
-                    var html = '<p>Estimated Time: ' + estimate.time + '</p>' +
-                               '<p>Estimated Cost: $' + estimate.cost + '</p>' +
-                               '<p>' + coveredText + ' ' + discountText + ' ' + depositText + '</p>';
-                    $('#csp_estimate_result').html(html);
-                    $('#csp_submit_request_btn').prop('disabled', false);
+                    var requests = response.data;
+                    var html = '<ul class="csp-request-list">';
+                    requests.forEach(function(req) {
+                        html += '<li class="csp-request-item" data-id="' + req.id + '">';
+                        html += '<strong>Task:</strong> ' + req.task_type + ' | ';
+                        html += '<strong>Status:</strong> ' + req.status;
+                        html += '</li>';
+                    });
+                    html += '</ul>';
+                    $('#csp-requests-content').html(html);
                 } else {
-                    $('#csp_estimate_result').html('<p style="color:red;">' + response.data + '</p>');
-                    $('#csp_submit_request_btn').prop('disabled', true);
+                    $('#csp-requests-content').html('<p>Error loading requests.</p>');
                 }
             },
             error: function() {
-                $('#csp_estimate_result').html('<p style="color:red;">Error getting estimate. Please try again later.</p>');
-                $('#csp_submit_request_btn').prop('disabled', true);
+                $('#csp-requests-content').html('<p>Error loading requests.</p>');
             }
         });
+    }
+
+    // Show popup with request details and agent comments
+    function showRequestDetails(id, requests) {
+        var req = requests.find(r => r.id == id);
+        if (!req) return;
+
+        var comments = req.agent_comments ? req.agent_comments.split('||').join('<br>') : 'No comments yet.';
+        var popupHtml = '<div class="csp-popup-overlay">';
+        popupHtml += '<div class="csp-popup">';
+        popupHtml += '<h3>Request Details</h3>';
+        popupHtml += '<p><strong>Task Type:</strong> ' + req.task_type + '</p>';
+        popupHtml += '<p><strong>Description:</strong> ' + req.description + '</p>';
+        popupHtml += '<p><strong>Status:</strong> ' + req.status + '</p>';
+        popupHtml += '<p><strong>Due Date:</strong> ' + (req.due_date ? req.due_date : 'N/A') + '</p>';
+        popupHtml += '<p><strong>Agent Comments:</strong><br>' + comments + '</p>';
+        popupHtml += '<button id="csp-close-popup">Close</button>';
+        popupHtml += '</div></div>';
+
+        $('body').append(popupHtml);
+
+        $('#csp-close-popup').on('click', function() {
+            $('.csp-popup-overlay').remove();
+        });
+    }
+
+    // Store loaded requests globally for popup access
+    var loadedRequests = [];
+
+    // Load requests on dashboard tab show
+    $('button[data-tab="requests"]').on('click', function() {
+        loadRequests();
     });
 
-    $('#csp-request-form').on('submit', function(e) {
-        e.preventDefault();
+    // Delegate click event for request items to show popup
+    $('#csp-requests-content').on('click', '.csp-request-item', function() {
+        var id = $(this).data('id');
+        showRequestDetails(id, loadedRequests);
+    });
 
-        var paymentOption = $('input[name="payment_option"]:checked').val();
-        var estimateCostText = $('#csp_estimate_result p').filter(function() {
-            return $(this).text().startsWith('Estimated Cost:');
-        }).text();
-        var estimateCost = 0;
-        if (estimateCostText) {
-            estimateCost = parseFloat(estimateCostText.replace('Estimated Cost: $', ''));
-        }
+    // Initial load of requests if requests tab is active on page load
+    if ($('button[data-tab="requests"]').hasClass('active')) {
+        loadRequests();
+    }
 
-        if (paymentOption === 'pay_now') {
-            if (estimateCost > 200) {
-                if (!confirm('The estimated cost is over $200. A $50 minimum deposit is required. Do you want to proceed with payment?')) {
-                    return;
+    // Update loadedRequests when requests are loaded
+    function loadRequests() {
+        $.ajax({
+            url: csp_ajax_obj.ajax_url,
+            method: 'GET',
+            data: {
+                action: 'csp_get_requests',
+                nonce: csp_ajax_obj.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    loadedRequests = response.data;
+                    var html = '<ul class="csp-request-list">';
+                    loadedRequests.forEach(function(req) {
+                        html += '<li class="csp-request-item" data-id="' + req.id + '">';
+                        html += '<strong>Task:</strong> ' + req.task_type + ' | ';
+                        html += '<strong>Status:</strong> ' + req.status;
+                        html += '</li>';
+                    });
+                    html += '</ul>';
+                    $('#csp-requests-content').html(html);
+                } else {
+                    $('#csp-requests-content').html('<p>Error loading requests.</p>');
                 }
+            },
+            error: function() {
+                $('#csp-requests-content').html('<p>Error loading requests.</p>');
             }
-            alert('Proceeding to payment gateway (to be implemented).');
-            // TODO: Integrate payment gateway here
-        } else if (paymentOption === 'invoice') {
-            alert('Invoice request submitted. We will contact you soon.');
-            // TODO: Implement invoice request handling here
-        }
-    });
+        });
+    }
 });
