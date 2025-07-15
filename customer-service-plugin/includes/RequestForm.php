@@ -71,9 +71,9 @@ class RequestForm {
         $worker_schedule = get_option( 'csp_worker_schedule', '' );
         $maintenance_plans = get_option( 'csp_maintenance_plans', '' );
 
-        $prompt = "You are a customer service assistant. Given the task type: {$task_type}, description: {$task_description}, worker schedule: {$worker_schedule}, and maintenance plans: {$maintenance_plans}, provide an estimated time to complete the task and estimated cost. If the client has a maintenance plan, apply coverage or discount accordingly. Also, if the cost is over $200, mention a $50 minimum deposit requirement.";
+        $prompt = "Given the task type: {$task_type}, description: {$task_description}, worker schedule: {$worker_schedule}, and maintenance plans: {$maintenance_plans}, provide an estimated time to complete the task and estimated cost. If the client has a maintenance plan, apply coverage or discount accordingly. Also, if the cost is over $200, mention a $50 minimum deposit requirement.";
 
-        $api_key = defined('OPENAI_API_KEY') ? OPENAI_API_KEY : '';
+        $api_key = get_option( 'csp_openai_api_key', '' );
         if ( empty( $api_key ) ) {
             wp_send_json_error( 'API key not configured.' );
         }
@@ -102,16 +102,24 @@ class RequestForm {
     }
 
     private function call_chatgpt_api( $prompt, $api_key ) {
-        $endpoint = 'https://api.openai.com/v1/chat/completions';
+        $endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+
+        $system_prompt = get_option( 'csp_system_prompt', "You are a customer service assistant. Provide an estimated time and cost for the given task. If the cost is over $200, mention a $50 minimum deposit requirement." );
+
+        $messages = array(
+            array(
+                'role' => 'system',
+                'content' => $system_prompt,
+            ),
+            array(
+                'role' => 'user',
+                'content' => $prompt,
+            ),
+        );
 
         $body = json_encode( array(
-            'model' => 'gpt-4o',
-            'messages' => array(
-                array(
-                    'role' => 'user',
-                    'content' => $prompt,
-                ),
-            ),
+            'model' => 'openai/gpt-4o',
+            'messages' => $messages,
             'max_tokens' => 150,
             'temperature' => 0.7,
         ) );
