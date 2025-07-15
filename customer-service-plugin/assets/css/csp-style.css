@@ -128,3 +128,45 @@
 .csp-popup button#csp-close-popup:hover {
     background-color: #333;
 }
+
+/* Messaging tabs */
+.csp-message-tabs {
+    margin-bottom: 1rem;
+}
+
+.csp-message-tab {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    margin-right: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    border-radius: 0;
+    transition: background-color 0.3s ease;
+}
+
+.csp-message-tab.active,
+.csp-message-tab:hover {
+    background-color: #333;
+}
+
+.csp-message-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.csp-message-item {
+    border-bottom: 1px solid #ddd;
+    padding: 0.5rem 0;
+}
+
+.csp-message-item strong {
+    font-weight: 700;
+}
+
+.csp-message-item small {
+    color: #666;
+    font-size: 0.85rem;
+}
