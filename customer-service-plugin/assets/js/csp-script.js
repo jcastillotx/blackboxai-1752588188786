@@ -103,4 +103,119 @@ jQuery(document).ready(function($) {
             }
         });
     }
+
+    // Messaging system integration
+    var currentMessageTab = 'inbox'; // inbox or sent
+
+    function loadMessages(tab) {
+        var data = {
+            action: 'csp_get_messages',
+            nonce: csp_ajax_obj.nonce,
+            worker_id: 0 // For inbox, worker_id is sender or receiver? Need clarification, assuming 0 fetches all messages
+        };
+
+        if (tab === 'sent') {
+            // For sent messages, we might need a different AJAX or filter
+            // For now, fetch all messages and filter client sent messages in frontend
+        }
+
+        $.ajax({
+            url: csp_ajax_obj.ajax_url,
+            method: 'GET',
+            data: data,
+            success: function(response) {
+                if (response.success) {
+                    var messages = response.data;
+                    var html = '<ul class="csp-message-list">';
+                    messages.forEach(function(msg) {
+                        html += '<li class="csp-message-item">';
+                        html += '<strong>From:</strong> ' + msg.sender_id + ' <strong>To:</strong> ' + msg.receiver_id + '<br>';
+                        html += '<span>' + msg.message + '</span><br>';
+                        html += '<small>' + msg.timestamp + '</small>';
+                        html += '</li>';
+                    });
+                    html += '</ul>';
+                    $('#csp-messages-content').html(html);
+                } else {
+                    $('#csp-messages-content').html('<p>Error loading messages.</p>');
+                }
+            },
+            error: function() {
+                $('#csp-messages-content').html('<p>Error loading messages.</p>');
+            }
+        });
+    }
+
+    // New message form
+    function renderNewMessageForm() {
+        var html = '<form id="csp-new-message-form">';
+        html += '<label for="csp_worker_id">Worker ID:</label>';
+        html += '<input type="number" id="csp_worker_id" name="worker_id" required />';
+        html += '<label for="csp_message_text">Message:</label>';
+        html += '<textarea id="csp_message_text" name="message" rows="4" required></textarea>';
+        html += '<button type="submit">Send Message</button>';
+        html += '</form>';
+        $('#csp-messages-content').html(html);
+
+        $('#csp-new-message-form').on('submit', function(e) {
+            e.preventDefault();
+            var worker_id = $('#csp_worker_id').val();
+            var message = $('#csp_message_text').val();
+
+            $.ajax({
+                url: csp_ajax_obj.ajax_url,
+                method: 'POST',
+                data: {
+                    action: 'csp_send_message',
+                    nonce: csp_ajax_obj.nonce,
+                    worker_id: worker_id,
+                    message: message
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert('Message sent.');
+                        loadMessages('inbox');
+                    } else {
+                        alert('Error sending message: ' + response.data);
+                    }
+                },
+                error: function() {
+                    alert('Error sending message.');
+                }
+            });
+        });
+    }
+
+    // Messaging tab buttons
+    var messageTabsHtml = '<div class="csp-message-tabs">';
+    messageTabsHtml += '<button id="csp-tab-inbox" class="csp-message-tab active">Inbox</button>';
+    messageTabsHtml += '<button id="csp-tab-sent" class="csp-message-tab">Sent</button>';
+    messageTabsHtml += '<button id="csp-tab-new" class="csp-message-tab">New Message</button>';
+    messageTabsHtml += '</div>';
+    $('#csp-messages-content').before(messageTabsHtml);
+
+    // Handle messaging tab clicks
+    $(document).on('click', '.csp-message-tab', function() {
+        $('.csp-message-tab').removeClass('active');
+        $(this).addClass('active');
+        var tabId = $(this).attr('id');
+
+        if (tabId === 'csp-tab-inbox') {
+            loadMessages('inbox');
+        } else if (tabId === 'csp-tab-sent') {
+            loadMessages('sent');
+        } else if (tabId === 'csp-tab-new') {
+            renderNewMessageForm();
+        }
+    });
+
+    // Load inbox messages by default when messages tab is clicked
+    $('button[data-tab="messages"]').on('click', function() {
+        loadMessages('inbox');
+    });
+
+    // Initial load if messages tab is active on page load
+    if ($('button[data-tab="messages"]').hasClass('active')) {
+        loadMessages('inbox');
+    }
 });
